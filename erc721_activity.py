@@ -62,8 +62,6 @@ def get_erc721_transactions(block_number, rpc_endpoint, etherscan_api_key):
 
         # Loop through each transaction in the block
         for tx in block['transactions']:
-            # Fetch the transaction details
-            #tx = web3.eth.get_transaction(tx_hash)
 
             # Check if the transaction involves a contract
             if tx['to'] is not None:
