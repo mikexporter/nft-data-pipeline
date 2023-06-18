@@ -42,12 +42,13 @@ def get_erc721_transactions(block_number, rpc_endpoint, etherscan_api_key):
         ("Block Timestamp", pl.UInt64),
         ("Transaction Hash", pl.Utf8),
         ("Contract Address", pl.Utf8),
+        ("Token ID", pl.UInt64),
         ("Sender", pl.Utf8),
         ("Value", pl.UInt64),
         ("Function Name", pl.Utf8),
         ("Function Arguments", pl.Utf8),
         ("Gas Limit", pl.UInt64),
-        ("Gas Price", pl.UInt64),
+        ("Gas Price", pl.UInt64)
     ]
 
     block_df = pl.DataFrame({}, schema=schema)
@@ -78,8 +79,13 @@ def get_erc721_transactions(block_number, rpc_endpoint, etherscan_api_key):
                     if is_erc721:
 
                         function_inputs_decoded = web3.eth.contract(abi=abi).decode_function_input(data=tx['input'])
-                        function_name = str(function_inputs_decoded[0])[10:-1]
+                        function_name = str(function_inputs_decoded[0])[10:-1].split('(')[0]
                         function_arguments = str(function_inputs_decoded[1])
+
+                        # Extract the token ID if a token transfer occurred
+                        token_id = None
+                        if function_name in ['transferFrom', 'safeTransferFrom']:
+                            token_id = function_arguments['_tokenId']
 
                         transaction_dict = {
                             "Block Number": block_number,
@@ -87,6 +93,7 @@ def get_erc721_transactions(block_number, rpc_endpoint, etherscan_api_key):
                             "Block Timestamp": block_timestamp,
                             "Transaction Hash": tx["hash"].hex(),
                             "Contract Address": contract_address,
+                            "Token ID": token_id,
                             "Sender": tx['from'],
                             "Value": tx['value'],
                             "Function Name": function_name,
@@ -108,4 +115,4 @@ def get_erc721_transactions(block_number, rpc_endpoint, etherscan_api_key):
 
 # Test the function with a block number
 block_number = 17497810
-get_erc721_transactions(block_number, infura_url, etherscan_api_key)
+pl.DataFrame.write_csv(get_erc721_transactions(block_number, infura_url, etherscan_api_key), f"erc721_from_block_{block_number}.csv")
